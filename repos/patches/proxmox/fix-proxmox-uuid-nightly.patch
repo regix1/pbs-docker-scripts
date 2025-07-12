@@ -2,7 +2,8 @@ diff --git a/proxmox-uuid/src/lib.rs b/proxmox-uuid/src/lib.rs
 index xxxxxxxx..yyyyyyyy 100644
 --- a/proxmox-uuid/src/lib.rs
 +++ b/proxmox-uuid/src/lib.rs
-@@ -94,7 +94,7 @@ impl Uuid {
+@@ -92,9 +92,9 @@ impl Uuid {
+         if src.len() == 36 {
              // Unfortunately the manpage of `uuid_parse(3)` states that it technically requires a
              // terminating null byte at the end, which we don't have, so do this manually:
 -            let uuid: &mut [u8] = unsafe { &mut (*uuid)[..] };
@@ -10,7 +11,9 @@ index xxxxxxxx..yyyyyyyy 100644
              let src = src.as_bytes();
              if src[8] != b'-' || src[13] != b'-' || src[18] != b'-' || src[23] != b'-' {
                  return Err(UuidError);
-@@ -115,7 +115,7 @@ impl Uuid {
+             }
+             for i in 0..4 {
+@@ -113,7 +113,7 @@ impl Uuid {
                  uuid[i] = (hex_digit(src[2 * i + 4])? << 4) | hex_digit(src[2 * i + 5])?;
              }
          } else if src.len() == 32 {
