@@ -104,4 +104,7 @@ VOLUME /var/log/proxmox-backup
 VOLUME /var/lib/proxmox-backup
 
 ADD /dockerfiles/runit/ /runit/
+# Make all runit service scripts executable
+RUN find /runit -name "run" -type f -exec chmod +x {} \;
+RUN find /runit -name "finish" -type f -exec chmod +x {} \;
 CMD ["runsvdir", "/runit"]
