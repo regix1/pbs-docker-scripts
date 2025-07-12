@@ -1,0 +1,17 @@
+#!/bin/sh
+exec 2>&1
+
+# Only run once per container lifecycle
+if [ -f /tmp/.pbs-post-install-done ]; then
+    echo "Post-install already completed, sleeping..."
+    exec sleep infinity
+fi
+
+echo "Running PBS post-install configuration..."
+/usr/local/bin/pbs-post-install.sh
+
+# Mark as completed
+touch /tmp/.pbs-post-install-done
+
+echo "Post-install completed, sleeping..."
+exec sleep infinity

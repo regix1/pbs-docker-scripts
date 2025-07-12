@@ -96,6 +96,10 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 # Add default configs
 ADD /dockerfiles/pbs/ /etc/proxmox-backup-default/
 
+# Copy the post-install script
+COPY pbs-post-install.sh /usr/local/bin/pbs-post-install.sh
+RUN chmod +x /usr/local/bin/pbs-post-install.sh
+
 VOLUME /etc/proxmox-backup
 VOLUME /var/log/proxmox-backup
 VOLUME /var/lib/proxmox-backup
