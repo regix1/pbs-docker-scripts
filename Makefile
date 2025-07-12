@@ -1,6 +1,7 @@
 BUILD_ARCHS = amd64 arm64v8
 CLIENT_BUILD_ARCHS = amd64 arm64v8
-REGISTRY ?= ayufan/proxmox-backup-server
+# Change this line to use GHCR
+REGISTRY ?= ghcr.io/$(shell echo ${GITHUB_REPOSITORY} | tr '[:upper:]' '[:lower:]')
 SHELL = /usr/bin/env bash
 include repos/version.mk
 
@@ -42,31 +43,31 @@ dev-%:
 
 docker-build: $(addsuffix -docker-build, $(BUILD_ARCHS))
 
-# Docker Hub Images
+# GHCR Images (renamed from dockerhub)
 
-%-dockerhub: %-docker-build
+%-ghcr: %-docker-build
 	docker push $(REGISTRY):$(TAG)-$*
 
-%-dockerhub-pull:
+%-ghcr-pull:
 	docker pull $(REGISTRY):$(TAG)-$*
 
-dockerhub-manifest: $(addsuffix -dockerhub-pull, $(BUILD_ARCHS))
+ghcr-manifest: $(addsuffix -ghcr-pull, $(BUILD_ARCHS))
 	# This requires `echo '{"experimental":"enabled"}' > ~/.docker/config.json`
 	-rm -rf ~/.docker/manifests
 	docker manifest create $(REGISTRY):$(TAG) \
 		$(addprefix $(REGISTRY):$(TAG)-, $(BUILD_ARCHS))
 	docker manifest push $(REGISTRY):$(TAG)
 
-dockerhub: $(addsuffix -dockerhub, $(BUILD_ARCHS))
-	make dockerhub-manifest
+ghcr: $(addsuffix -ghcr, $(BUILD_ARCHS))
+	make ghcr-manifest
 
-%-dockerhub-latest-release: %-dockerhub-pull
+%-ghcr-latest-release: %-ghcr-pull
 	$(foreach latest_tag,$(LATEST_TAGS), \
 		docker tag $(REGISTRY):$(TAG)-$* $(REGISTRY):$(latest_tag)-$* $(newline) \
 		docker push $(REGISTRY):$(latest_tag)-$* $(newline) \
 	)
 
-dockerhub-latest-release: $(addsuffix -dockerhub-latest-release, $(BUILD_ARCHS))
+ghcr-latest-release: $(addsuffix -ghcr-latest-release, $(BUILD_ARCHS))
 	# This requires `echo '{"experimental":"enabled"}' > ~/.docker/config.json`
 	-rm -rf ~/.docker/manifests
 	$(foreach latest_tag,$(LATEST_TAGS), \
@@ -93,7 +94,7 @@ client: $(addsuffix -client, $(CLIENT_BUILD_ARCHS))
 
 # Debian Packages
 
-%-deb: %-dockerhub-pull
+%-deb: %-ghcr-pull
 	mkdir -p release/$(TAG)
 	-docker rm -f proxmox-backup-$(TAG)-$*
 	docker create --name=proxmox-backup-$(TAG)-$* $(REGISTRY):$(TAG)-$*
@@ -137,12 +138,12 @@ dev-shell: dev-docker-build
 
 # Release Helpers
 
-release: dockerhub client deb
+release: ghcr client deb
 
 # GitHub Releases
 
-export GITHUB_USER ?= ayufan
-export GITHUB_REPO ?= pve-backup-server-dockerfiles
+export GITHUB_USER ?= $(shell echo ${GITHUB_REPOSITORY} | cut -d/ -f1)
+export GITHUB_REPO ?= $(shell echo ${GITHUB_REPOSITORY} | cut -d/ -f2)
 GITHUB_RELEASE_BIN ?= go run github.com/github-release/github-release@latest
 
 github-create-draft:
@@ -166,5 +167,10 @@ github-pre-release:
 	make github-create-pre-release
 
 github-latest-release:
-	make dockerhub-latest-release
+	make ghcr-latest-release
 	$(GITHUB_RELEASE_BIN) edit -t $(TAG) --description "$$(cat RELEASE.md)"
+
+# Backward compatibility aliases (optional)
+dockerhub: ghcr
+dockerhub-manifest: ghcr-manifest
+dockerhub-latest-release: ghcr-latest-release

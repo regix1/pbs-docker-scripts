@@ -1,0 +1,145 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      VERSION:
+        description: 'Version to build'
+        required: false
+        type: string
+      TAG:
+        description: 'Tag name to use'
+        required: false
+        type: string
+      release_type:
+        description: 'Release type'
+        required: true
+        type: choice
+        options:
+          - pre-release
+          - full-release
+        default: 'pre-release'
+
+env:
+  VERSION: ${{ inputs.VERSION }}
+  TAG: ${{ inputs.TAG }}
+  GITHUB_REPOSITORY: ${{ github.repository }}
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    if: inputs.release_type == 'pre-release'
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Run github-create-draft
+      run: make github-create-draft
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  docker-build:
+    needs: [draft]
+    if: always() && (needs.draft.result == 'success' || inputs.release_type == 'full-release')
+    runs-on: ${{ matrix.runs_on }}
+    strategy:
+      matrix:
+        include:
+          - runs_on: ubuntu-24.04-arm
+            docker_arch: arm64v8
+          - runs_on: ubuntu-24.04
+            docker_arch: amd64
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+    
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Run GHCR build and push for ${{matrix.docker_arch}}
+      if: inputs.release_type == 'pre-release'
+      run: make ${{matrix.docker_arch}}-ghcr
+    
+    - name: Run deb for ${{matrix.docker_arch}}
+      if: inputs.release_type == 'pre-release'
+      run: make ${{matrix.docker_arch}}-deb
+    
+    - name: Upload deb files
+      if: inputs.release_type == 'pre-release'
+      run: make github-upload-all
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  client-build:
+    needs: [draft]
+    if: always() && (needs.draft.result == 'success' || inputs.release_type == 'full-release') && inputs.release_type == 'pre-release'
+    runs-on: ${{ matrix.runs_on }}
+    strategy:
+      matrix:
+        include:
+          - runs_on: ubuntu-24.04-arm
+            docker_arch: arm64v8
+          - runs_on: ubuntu-24.04
+            docker_arch: amd64
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+    
+    - name: Run client for ${{matrix.docker_arch}}
+      run: make ${{matrix.docker_arch}}-client
+    
+    - name: Upload artifacts
+      run: make github-upload-all
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  pre-release:
+    runs-on: ubuntu-latest
+    needs: [client-build, docker-build]
+    if: always() && inputs.release_type == 'pre-release' && needs.client-build.result == 'success' && needs.docker-build.result == 'success'
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Run GHCR manifest
+      run: make ghcr-manifest
+    
+    - name: Run github-create-pre-release
+      run: make github-create-pre-release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  full-release:
+    runs-on: ubuntu-latest
+    if: inputs.release_type == 'full-release'
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Run github-latest-release
+      run: make github-latest-release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
