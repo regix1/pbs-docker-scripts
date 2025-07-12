@@ -2,12 +2,13 @@ diff --git a/src/decoder/mod.rs b/src/decoder/mod.rs
 index xxxxxxxx..yyyyyyyy 100644
 --- a/src/decoder/mod.rs
 +++ b/src/decoder/mod.rs
-@@ -32,7 +32,7 @@ static mut SCRATCH_BUFFER: OnceCell<[u8; 4096]> = OnceCell::new();
- 
+@@ -32,7 +32,7 @@ static mut SCRATCH_BUFFER: MaybeUninit<[u8; 4096]> = MaybeUninit::uninit();
  fn scratch_buffer() -> &'static mut [u8] {
-     SCRATCH_BUFFER.get_or_init(|| [0u8; 4096]);
--    unsafe { &mut (*SCRATCH_BUFFER.as_mut_ptr())[..] }
-+    unsafe { &mut (&mut (*SCRATCH_BUFFER.as_mut_ptr()))[..] }
+     unsafe {
+         let ptr: *mut MaybeUninit<[u8; 4096]> = &raw mut SCRATCH_BUFFER;
+         let ptr: &mut MaybeUninit<[u8; 4096]> = &mut *ptr;
+-        &mut (*ptr.as_mut_ptr())[..]
++        &mut (&mut (*ptr.as_mut_ptr()))[..]
+     }
  }
  
- impl<T: SeqRead> Decoder<T> {
