@@ -2,7 +2,7 @@ diff --git a/src/decoder/mod.rs b/src/decoder/mod.rs
 index xxxxxxxx..yyyyyyyy 100644
 --- a/src/decoder/mod.rs
 +++ b/src/decoder/mod.rs
-@@ -32,7 +32,7 @@ static mut SCRATCH_BUFFER: MaybeUninit<[u8; 4096]> = MaybeUninit::uninit();
+@@ -34,7 +34,7 @@ static mut SCRATCH_BUFFER: MaybeUninit<[u8; 4096]> = MaybeUninit::uninit();
  fn scratch_buffer() -> &'static mut [u8] {
      unsafe {
          let ptr: *mut MaybeUninit<[u8; 4096]> = &raw mut SCRATCH_BUFFER;
