@@ -11,7 +11,7 @@ index xxxxxxxx..yyyyyyyy 100644
              if libc::getrandom(
                  uuid.as_mut_ptr() as *mut libc::c_void,
                  uuid.len(),
-@@ -118,7 +118,7 @@ impl Uuid {
+@@ -115,7 +115,7 @@ impl Uuid {
      pub fn generate_time_based() -> Self {
          let mut uuid = Self::null();
          unsafe {
