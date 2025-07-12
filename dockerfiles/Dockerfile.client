@@ -1,5 +1,4 @@
-ARG DOCKER_ARCH
-FROM ${DOCKER_ARCH}/debian:bookworm AS builder
+FROM debian:bookworm AS builder
 
 RUN apt-get -y update && \
   apt-get -y install \
@@ -10,10 +9,16 @@ RUN apt-get -y update && \
     libacl1-dev libpam0g-dev libfuse3-dev \
     libsystemd-dev uuid-dev libssl-dev \
     libclang-dev libjson-perl libcurl4-openssl-dev \
-    dh-exec wget
+    dh-exec dh-nodejs wget
+
+ENV RUSTUP_TOOLCHAIN=stable
+RUN wget https://static.rust-lang.org/rustup/rustup-init.sh && \
+  chmod +x rustup-init.sh && \
+  ./rustup-init.sh -y --default-toolchain "$RUSTUP_TOOLCHAIN"
 
 WORKDIR /src
 
+RUN for tool in /root/.cargo/bin/*; do ln -vsf $tool /usr/bin/; done
 RUN /usr/bin/rustc --version
 RUN git config --global user.email "docker@compile.dev" && \
   git config --global user.name "Docker Compile"
@@ -23,24 +28,16 @@ ADD /scripts/ /scripts/
 ADD /repos/versions /repos/
 RUN /scripts/git-clone.bash /repos/versions
 
-# Install valid rust toolchain
-ARG DOCKER_ARCH
-RUN \
-  if [ "${DOCKER_ARCH}" != "arm32v7" ]; then \
-    wget https://static.rust-lang.org/rustup/rustup-init.sh && \
-    chmod +x rustup-init.sh && \
-    ./rustup-init.sh -y --default-toolchain nightly && \
-    for tool in /root/.cargo/bin/*; do ln -vsf $tool /usr/bin/; done; \
-  fi
-
 # Apply all patches
-ADD /repos/patches/ /repos/patches/
-RUN /scripts/apply-patches.bash /repos/patches/
+ADD /repos/patches-client/ /repos/patches-client/
+RUN /scripts/apply-patches.bash /repos/patches-client/
 RUN /scripts/strip-cargo.bash
 RUN /scripts/resolve-dependencies.bash
 
-# Build
-RUN make -C proxmox-backup proxmox-backup-client-static BUILD_MODE=release COMPILEDIR=target/static/release
+# Build client
+RUN cd proxmox-backup && cargo build --bin proxmox-backup-client --release
 
-# Bundle client
-RUN /scripts/bundle-client.bash
+# Create tarball
+RUN cd proxmox-backup && \
+  tar czf /proxmox-backup-client-$(dpkg --print-architecture).tgz \
+    target/release/proxmox-backup-client
