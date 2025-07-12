@@ -1,5 +1,4 @@
-ARG ARCH=
-FROM ${ARCH}debian:bookworm AS toolchain
+FROM debian:bookworm AS toolchain
 
 RUN apt-get -y update && \
   apt-get -y install \
@@ -83,7 +82,7 @@ RUN mkdir -p /deb && \
 
 #=================================
 
-FROM ${ARCH}debian:bookworm
+FROM debian:bookworm
 COPY --from=builder /deb/ /deb/
 RUN mkdir -p /deb/static && \
   mv /deb/proxmox-backup-client-static*.deb /deb/static/

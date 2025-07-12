@@ -2,26 +2,54 @@ version: '2.1'
 
 services:
   pbs:
-    image: ayufan/proxmox-backup-server:${TAG:-latest}
+    image: ghcr.io/regix1/pbs-docker-scripts:latest
+    container_name: pbs
     ports:
-      - 8007:8007
+      - "8007:8007"
     mem_limit: 2G
+    hostname: proxmox-backup
+    environment:
+      - PBS_ENTERPRISE=yes
+      - PBS_NO_SUBSCRIPTION=yes
+      - DISABLE_SUBSCRIPTION_NAG=yes
+      - TZ=America/Chicago
     volumes:
+      - backups:/backups
       - pbs_etc:/etc/proxmox-backup
       - pbs_logs:/var/log/proxmox-backup
       - pbs_lib:/var/lib/proxmox-backup
     tmpfs:
       - /run
-    cap_add: # smartctl support
-      - SYS_RAWIO
+      - /run/proxmox-backup
     devices:
-      - /dev/sda
-      - /dev/sdb
+      - /dev/nvme0n1:/dev/nvme0n1
+    cap_add:
+      - SYS_RAWIO
     restart: unless-stopped
     stop_signal: SIGHUP
 
 volumes:
+  backups:
+    driver: local
+    driver_opts:
+      type: ''
+      o: bind,rw
+      device: /mnt/backups/linux
   pbs_etc:
+    driver: local
+    driver_opts:
+      type: ''
+      o: bind
+      device: /srv/extra/pbs/etc
   pbs_logs:
+    driver: local
+    driver_opts:
+      type: ''
+      o: bind
+      device: /srv/extra/pbs/logs
   pbs_lib:
-
+    driver: local
+    driver_opts:
+      type: ''
+      o: bind
+      device: /srv/extra/pbs/lib

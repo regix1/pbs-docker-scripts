@@ -26,16 +26,22 @@ endef
 # Architectures
 
 arm32v7-%: DOCKER_ARCH=arm32v7
+arm32v7-%: PLATFORM=linux/arm/v7
+
 arm64v8-%: DOCKER_ARCH=arm64v8
+arm64v8-%: PLATFORM=linux/arm64
+
 amd64-%: DOCKER_ARCH=amd64
+amd64-%: PLATFORM=linux/amd64
+
 dev-%:
 
 # Docker Images
 
 %-docker-build:
 	docker build \
+		--platform $(PLATFORM) \
 		--tag $(REGISTRY):$(TAG)-$* \
-		--build-arg ARCH=$(addsuffix /,$(DOCKER_ARCH)) \
 		--build-arg TAG=$(TAG) \
 		--build-arg VERSION=$(VERSION) \
 		-f dockerfiles/Dockerfile \
@@ -80,8 +86,8 @@ ghcr-latest-release: $(addsuffix -ghcr-latest-release, $(BUILD_ARCHS))
 
 %-client:
 	docker build \
+		--platform $(PLATFORM) \
 		--tag $(REGISTRY):$(TAG)-client-$* \
-		--build-arg DOCKER_ARCH=$(DOCKER_ARCH) \
 		--build-arg TAG=$(TAG) \
 		--build-arg VERSION=$(VERSION) \
 		-f dockerfiles/Dockerfile.client \
@@ -117,8 +123,8 @@ tmp-env-client: tmp-env
 
 tmp-docker-shell:
 	docker build \
+		--platform $(PLATFORM) \
 		--tag tmp-docker-shell \
-		--build-arg ARCH=$(addsuffix /,$(DOCKER_ARCH)) \
 		--build-arg TAG=$(TAG) \
 		--build-arg VERSION=$(VERSION) \
 		--target toolchain \
