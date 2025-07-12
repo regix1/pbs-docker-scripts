@@ -2,10 +2,7 @@ diff --git a/pbs-api-types/src/crypto.rs b/pbs-api-types/src/crypto.rs
 index xxxxxxxx..yyyyyyyy 100644
 --- a/pbs-api-types/src/crypto.rs
 +++ b/pbs-api-types/src/crypto.rs
-@@ -85,12 +85,12 @@ impl std::str::FromStr for Fingerprint {
-     fn from_str(s: &str) -> Result<Self, Self::Err> {
-         let mut out = std::mem::MaybeUninit::<[u8; 32]>::uninit();
- 
+@@ -88,7 +88,7 @@ impl std::str::FromStr for Fingerprint {
          if s.len() != 64 {
              bail!("bad fingerprint length");
          }
@@ -14,4 +11,3 @@ index xxxxxxxx..yyyyyyyy 100644
              .map_err(|_| format_err!("bad fingerprint"))?;
          Ok(Self(out))
      }
- }
