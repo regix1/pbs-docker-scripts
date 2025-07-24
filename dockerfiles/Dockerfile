@@ -104,7 +104,16 @@ VOLUME /var/log/proxmox-backup
 VOLUME /var/lib/proxmox-backup
 
 ADD /dockerfiles/runit/ /runit/
+
+# Fix the proxmox-remove-subscription service structure
+# Runit expects the run script to be directly in the service directory, not in control/
+RUN if [ -f /runit/proxmox-remove-subscription/control/run ]; then \
+      mv /runit/proxmox-remove-subscription/control/run /runit/proxmox-remove-subscription/run; \
+      rmdir /runit/proxmox-remove-subscription/control 2>/dev/null || true; \
+    fi
+
 # Make all runit service scripts executable
 RUN find /runit -name "run" -type f -exec chmod +x {} \;
 RUN find /runit -name "finish" -type f -exec chmod +x {} \;
+
 CMD ["runsvdir", "/runit"]

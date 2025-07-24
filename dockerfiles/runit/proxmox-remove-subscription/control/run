@@ -1,17 +1,38 @@
 #!/bin/sh
 exec 2>&1
 
+# Service name for logging
+SERVICE_NAME="proxmox-remove-subscription"
+LOCK_FILE="/tmp/.pbs-post-install-done"
+POST_INSTALL_SCRIPT="/usr/local/bin/pbs-post-install.sh"
+
+echo "[$SERVICE_NAME] Starting service..."
+
 # Only run once per container lifecycle
-if [ -f /tmp/.pbs-post-install-done ]; then
-    echo "Post-install already completed, sleeping..."
+if [ -f "$LOCK_FILE" ]; then
+    echo "[$SERVICE_NAME] Post-install already completed, sleeping..."
     exec sleep infinity
 fi
 
-echo "Running PBS post-install configuration..."
-/usr/local/bin/pbs-post-install.sh
+echo "[$SERVICE_NAME] Running PBS post-install configuration..."
 
-# Mark as completed
-touch /tmp/.pbs-post-install-done
+# Check if post-install script exists and is executable
+if [ ! -x "$POST_INSTALL_SCRIPT" ]; then
+    echo "[$SERVICE_NAME] ERROR: Post-install script not found or not executable: $POST_INSTALL_SCRIPT"
+    echo "[$SERVICE_NAME] Sleeping anyway to prevent restart loop..."
+    exec sleep infinity
+fi
 
-echo "Post-install completed, sleeping..."
+# Run the post-install script with error handling
+if "$POST_INSTALL_SCRIPT"; then
+    echo "[$SERVICE_NAME] Post-install script completed successfully"
+    # Mark as completed
+    touch "$LOCK_FILE"
+else
+    echo "[$SERVICE_NAME] WARNING: Post-install script failed, but continuing..."
+    # Still mark as completed to prevent endless retries
+    touch "$LOCK_FILE"
+fi
+
+echo "[$SERVICE_NAME] Service initialization complete, sleeping..."
 exec sleep infinity
